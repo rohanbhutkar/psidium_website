@@ -37,6 +37,12 @@ in vec2 v_uv;
 out vec4 outColor;
 uniform vec2 u_resolution;
 uniform float u_time;
+uniform vec3 u_accentA;
+uniform vec3 u_accentB;
+uniform vec3 u_accentC;
+uniform vec3 u_accentD;
+uniform vec3 u_weights; // x:cloud, y:veins, z:pulse
+uniform float u_extraWeight; // weight for extra detail layer
 
 float hash(vec2 p){
   p = fract(p * vec2(127.1, 311.7));
@@ -91,15 +97,22 @@ void main(){
   float cloud = smoothstep(0.18, 0.52, s1 * 0.9 + s2 * 0.5 + s3 * 0.25);
   float pulse = smoothstep(0.16, 0.4, length(pos + vec2(s3 * 0.2, s2 * 0.15)));
 
-  vec3 base = vec3(0.0706, 0.0235, 0.0392);
-  vec3 accentA = vec3(0.3059, 0.1019, 0.0706); // #4E1B12
-  vec3 accentB = vec3(0.5961, 0.1490, 0.0980); // #982619
-  vec3 accentC = vec3(0.8431, 0.7765, 0.7333); // #D7C6BB
+  // short fade-in so the lightest accents are present immediately
+  float fadeIn = smoothstep(0.0, 2.0, u_time); // 2s fade
+  cloud = mix(max(cloud, 0.06), cloud, fadeIn);
+  pulse = mix(max(pulse, 0.06), pulse, fadeIn);
 
+  vec3 base = vec3(0.0706, 0.0235, 0.0392);
   vec3 color = base;
-  color += accentA * cloud * 0.72;
-  color += accentB * veins * 0.32;
-  color += accentC * pulse * 0.22;
+    color += u_accentA * cloud * u_weights.x;
+    color += u_accentB * veins * u_weights.y;
+    color += u_accentC * pulse * u_weights.z;
+
+  // additional detail layer to increase range / break flatness
+  float detail = fbm(pos * 7.6 + vec2(-t * 0.05, t * 0.09));
+  float layer = smoothstep(0.18, 0.56, detail);
+  layer = mix(max(layer, 0.03), layer, fadeIn);
+  color += u_accentD * layer * u_extraWeight;
 
   float deep = smoothstep(0.0, 0.5, s1 * 0.58 + s3 * 0.42);
   color *= mix(0.86, 1.0, deep);
@@ -137,7 +150,43 @@ function createProgram(gl, vsSource, fsSource){
 }
 
 const program = gl ? createProgram(gl, vert, frag) : null;
-const start = performance.now();
+// Pre-warm the time so the initial frame isn't overly muted
+const start = performance.now() - 120000; // 5s of virtual elapsed time
+
+// Fixed Anchor palette (no cycling)
+const anchorPalette = {
+  name: 'Anchor',
+  accentA: [78/255,27/255,18/255],
+  accentB: [152/255,38/255,25/255],
+  accentC: [122/255,35/255,29/255],
+  accentD: [210/255,90/255,60/255],
+  weights: [0.72, 0.32, 0.10],
+  extraWeight: 0.10,
+  gradient: ['#0f0404', '#4E1B12', '#982619']
+};
+
+let gradientStops = anchorPalette.gradient.slice();
+
+function applyAnchorPalette(){
+  gradientStops = anchorPalette.gradient.slice();
+  if(gl && program){
+    gl.useProgram(program);
+    const locA = gl.getUniformLocation(program, 'u_accentA');
+    const locB = gl.getUniformLocation(program, 'u_accentB');
+    const locC = gl.getUniformLocation(program, 'u_accentC');
+    const locD = gl.getUniformLocation(program, 'u_accentD');
+    const locW = gl.getUniformLocation(program, 'u_weights');
+    const locE = gl.getUniformLocation(program, 'u_extraWeight');
+    if(locA) gl.uniform3f(locA, anchorPalette.accentA[0], anchorPalette.accentA[1], anchorPalette.accentA[2]);
+    if(locB) gl.uniform3f(locB, anchorPalette.accentB[0], anchorPalette.accentB[1], anchorPalette.accentB[2]);
+    if(locC) gl.uniform3f(locC, anchorPalette.accentC[0], anchorPalette.accentC[1], anchorPalette.accentC[2]);
+    if(locD) gl.uniform3f(locD, anchorPalette.accentD[0], anchorPalette.accentD[1], anchorPalette.accentD[2]);
+    if(locW) gl.uniform3f(locW, anchorPalette.weights[0], anchorPalette.weights[1], anchorPalette.weights[2]);
+    if(locE) gl.uniform1f(locE, anchorPalette.extraWeight || 0.0);
+  }
+}
+
+applyAnchorPalette();
 
 if(gl && program){
   const posBuf = gl.createBuffer();
@@ -184,9 +233,9 @@ if(gl && program){
     const h = canvas.height;
 
     const gradient = ctx.createLinearGradient(0, 0, w, h);
-    gradient.addColorStop(0, '#12060a');
-    gradient.addColorStop(0.35, '#3f1014');
-    gradient.addColorStop(1, '#5f1f24');
+    gradient.addColorStop(0, gradientStops[0] || '#0f0404');
+    gradient.addColorStop(0.35, gradientStops[1] || '#4E1B12');
+    gradient.addColorStop(1, gradientStops[2] || '#982619');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
 
