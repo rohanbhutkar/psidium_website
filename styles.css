@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;1,300&display=swap');
+
+:root{
+  --bg-1:#12060a;
+  --bg-2:#4E1B12;
+  --bg-3:#5F1F24;
+  --accent-1:#982619;
+  --accent-2:#D7C6BB;
+  --accent-3:#F7F0E4;
+  --highlight:#F6EEE2;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background:var(--bg-1);
+  color:var(--highlight);
+  overflow:hidden;
+}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;display:block}
+#content{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:5vmin;pointer-events:none}
+.logo{width:6.5rem;height:auto;margin-bottom:2rem;pointer-events:auto}
+.brand{font-weight:300;font-size:12vmin;letter-spacing:0.55rem;margin:0;color:var(--accent-3);text-shadow:0 0 24px rgba(215,198,187,0.25);pointer-events:auto}
+.subtitle{margin-top:1rem;font-size:1.8vmin;font-weight:400;opacity:1;max-width:70ch;line-height:1.4;color:rgba(215,198,187,0.92)}
+.contact{margin-top:1.6rem;font-size:1.6vmin;color:var(--accent-3);text-decoration:none;filter:brightness(1);pointer-events:auto}
+.contact:hover{filter:brightness(1.15)}
+
+/* Ensure single-viewport look */
+@media (max-width:600px){
+  .logo{width:5rem}
+  .brand{font-size:18vmin;letter-spacing:0.28rem}
+  .subtitle{font-size:2.6vmin}
+  .contact{font-size:2.2vmin}
+}
