@@ -1,4 +1,4 @@
-KAIROS — Static single-viewport site
+psidium bio — Static single-viewport site
 
 To run locally:
 
